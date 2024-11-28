@@ -39,11 +39,6 @@ jobs:
           path: "dist/"
           if-no-files-found: error
 
-      - name: install
-        run: python -m pip install sigstore
-      - uses: sigstore/gh-action-sigstore-python@v3.0.0
-        with:
-          inputs: dist/output1 dist/output2
 
   provenance:
     needs: [build]
@@ -55,6 +50,22 @@ jobs:
     with:
       base64-subjects: "${{ needs.build.outputs.hashes }}"
       upload-assets: true
+
+  provenance-sigstore:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+    steps:
+      - name: install
+        run: |
+          python -m pip install sigstore requests
+          ls -l
+      - uses: sigstore/gh-action-sigstore-python@v3.0.0
+        with:
+          inputs: dist/output1 dist/output2
 
   publish-to-github:
     name: "Publish to github"
