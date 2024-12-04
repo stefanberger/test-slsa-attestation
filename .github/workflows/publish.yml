@@ -36,13 +36,22 @@ jobs:
         run: |
           cd dist && echo "hashes=$(sha256sum * | base64 -w0)" >> $GITHUB_OUTPUT
 
-      - name: install
+      - name: Install sigstore
         run: |
           python -m pip install sigstore requests
 
       - uses: sigstore/gh-action-sigstore-python@v3.0.0
         with:
           inputs: dist/output1 dist/output2
+
+      - name: Install cosign
+        run: |
+          apt-get install -y wget
+          wget -O cosign 'https://drive.usercontent.google.com/download?id=1moZgK6_REb4YqVv2wo0OgHUdm2gqkfWy&export=download&authuser=0&confirm=t&uuid=b9bd156f-0df0-43d5-b3a1-dda4e63e5605&at=AENtkXZ7-xqbsEb4dhlSeclxvqEK:1733263724683'
+          chmod 755 cosign
+          COSIGN_PASSWORD=123456 ./cosign generate-key-pair
+          COSIGN_PASSWORD=123456 ./cosign sign-blob -y --key cosign.key dist/output1 --bundle dist/output1.bundle
+          COSIGN_PASSWORD=123456 ./cosign sign-blob -y --key cosign.key dist/output2 --bundle dist/output2.bundle
 
       - name: "Upload dists"
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
