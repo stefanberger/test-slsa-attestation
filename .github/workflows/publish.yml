@@ -62,13 +62,14 @@ jobs:
           python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.identity-token }} dist/output2 --bundle dist/output2.sigstore-plain.json
 
       - name: Install cosign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         run: |
           curl -sSfL 'https://drive.usercontent.google.com/download?id=1moZgK6_REb4YqVv2wo0OgHUdm2gqkfWy&export=download&authuser=0&confirm=t&uuid=b9bd156f-0df0-43d5-b3a1-dda4e63e5605&at=AENtkXZ7-xqbsEb4dhlSeclxvqEK:1733263724683' --output cosign
           chmod 755 cosign
-          COSIGN_PASSWORD=123456 ./cosign generate-key-pair
-          cp cosign.pub dist/
-          COSIGN_PASSWORD=123456 ./cosign sign-blob -y --key cosign.key dist/output1 --bundle dist/output1.bundle
-          COSIGN_PASSWORD=123456 ./cosign sign-blob -y --key cosign.key dist/output2 --bundle dist/output2.bundle
+          echo -e "${COSIGN_PUBLIC_KEY}" > dist/cosign.pub
+          COSIGN_PASSWORD=123456 ./cosign sign-blob -y --key env://COSIGN_PRIVATE_KEY dist/output1 --bundle dist/output1.bundle
+          COSIGN_PASSWORD=123456 ./cosign sign-blob -y --key env://COSIGN_PRIVATE_KEY dist/output2 --bundle dist/output2.bundle
 
       - name: "Upload dists"
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
