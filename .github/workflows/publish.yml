@@ -3,9 +3,12 @@ name: Publish
 on:
   push:
     branches:
-      - "main"
+      - "master"
     tags:
       - "*"
+  pull_request:
+    branches:
+      - "master"
 
 permissions:
   contents: read
@@ -46,6 +49,8 @@ jobs:
 
       - name: Get OIDC token
         id: get-oidc-token
+        env:
+          SIGSTORE_STS_CLIENT_SECRET: ${{ secrets.SIGSTORE_STS_CLIENT_SECRET }}
         run: |
           identity_token=$( \
             curl -H \
@@ -55,11 +60,25 @@ jobs:
           )
           echo "identity-token=$identity_token" >> $GITHUB_OUTPUT
           echo "$identity_token"
+          echo "$identity_token" | base64
+          access_token=$( \
+            curl 'https://sigstore.verify.ibm.com/oauth2/token' \
+                --header 'Content-Type: application/x-www-form-urlencoded' \
+                --data-urlencode 'client_id=sigstore' \
+                --data-urlencode "client_secret=${SIGSTORE_STS_CLIENT_SECRET}" \
+                --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+                --data-urlencode "subject_token=${identity_token}" \
+                --data-urlencode 'subject_token_type=GitHubIdentityToken' -s \
+            | jq -r .access_token \
+          )
+          echo "ibm-identity-token=$access_token" >> $GITHUB_OUTPUT
 
       - name: Sign artifact with sigstore
         run: |
           python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.identity-token }} dist/output1 --bundle dist/output1.sigstore-plain.json
           python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.identity-token }} dist/output2 --bundle dist/output2.sigstore-plain.json
+          python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.ibm-identity-token }} dist/output1 --bundle dist/output1.sigstore-plain-ibm-signed.json
+          python -m sigstore sign --identity-token ${{ steps.get-oidc-token.outputs.ibm-identity-token }} dist/output2 --bundle dist/output2.sigstore-plain-ibm-signed.json
 
       - name: Install cosign
         env:
