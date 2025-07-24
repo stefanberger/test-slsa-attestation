@@ -52,6 +52,7 @@ jobs:
         env:
           SIGSTORE_STS_CLIENT_SECRET: ${{ secrets.SIGSTORE_STS_CLIENT_SECRET }}
         run: |
+          echo $ACTIONS_ID_TOKEN_REQUEST_TOKEN | base64
           identity_token=$( \
             curl -H \
               "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
